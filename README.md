@@ -9,11 +9,13 @@ A full-stack application for mental health support using AI technology.
 ├── frontend/           # Next.js frontend
 │   ├── app/           # Next.js app directory
 │   ├── public/        # Static files
+│   ├── types/         # TypeScript type definitions
 │   └── package.json   # Frontend dependencies
 └── backend/           # Flask backend
     ├── app.py         # Main Flask application
     ├── requirements.txt # Python dependencies
-    └── .env           # Environment variables
+    ├── .env           # Environment variables
+    └── .env.example   # Example environment configuration
 ```
 
 ## Prerequisites
@@ -69,7 +71,11 @@ A full-stack application for mental health support using AI technology.
    pip install -r requirements.txt
    ```
 
-5. Update the `.env` file with your MongoDB URI and OpenAI API key.
+5. Copy the example environment file and update with your credentials:
+   ```bash
+   cp .env.example .env
+   ```
+   Then update the `.env` file with your MongoDB URI and OpenAI API key.
 
 6. Start the Flask server:
    ```bash
@@ -79,9 +85,13 @@ A full-stack application for mental health support using AI technology.
 ## Features
 
 - AI-powered chat interface for mental health support
+- Interactive therapy dashboard for progress tracking
+- Mood tracking system
 - Journal entry system for tracking thoughts and emotions
+- Real-time chat with AI therapist
 - Secure user authentication
-- Responsive and modern UI
+- Responsive and modern UI with Tailwind CSS
+- TypeScript support for enhanced development experience
 
 ## API Endpoints
 
@@ -89,6 +99,8 @@ A full-stack application for mental health support using AI technology.
 - `POST /api/chat` - Chat with the AI assistant
 - `POST /api/journal` - Create a new journal entry
 - `GET /api/journal` - Get all journal entries
+- `POST /api/mood` - Record mood entry
+- `GET /api/mood` - Get mood history
 
 ## Contributing
 
