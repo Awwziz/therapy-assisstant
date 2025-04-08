@@ -25,7 +25,7 @@ sentry_sdk.init(
 )
 
 app = Flask(__name__)
-CORS(app)
+CORS(app, resources={r"/api/*": {"origins": "*"}})
 app.config['SECRET_KEY'] = os.getenv('JWT_SECRET_KEY', 'your-secret-key')
 
 # Configure logging
@@ -41,17 +41,57 @@ app.logger.setLevel(logging.INFO)
 app.logger.info('Therapy Assistant startup')
 
 # Initialize OpenAI client
-client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
+try:
+    client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
+    app.logger.info('Successfully initialized OpenAI client')
+except Exception as e:
+    app.logger.error(f'Failed to initialize OpenAI client: {str(e)}')
+    sentry_sdk.capture_exception(e)
 
 # MongoDB connection
 try:
-    client = MongoClient(os.getenv('MONGODB_URI', 'mongodb://localhost:27017'))
-    db = client.mental_health_db
+    mongo_client = MongoClient(os.getenv('MONGODB_URI', 'mongodb://localhost:27017'))
+    db = mongo_client.mental_health_db
     app.logger.info('Successfully connected to MongoDB')
 except Exception as e:
     app.logger.error(f'Failed to connect to MongoDB: {str(e)}')
     sentry_sdk.capture_exception(e)
     raise
+
+# Health check endpoint
+@app.route('/api/health', methods=['GET'])
+def health_check():
+    return jsonify({
+        'status': 'healthy',
+        'timestamp': datetime.utcnow().isoformat()
+    })
+
+# Error handlers
+@app.errorhandler(404)
+def not_found_error(error):
+    app.logger.error(f'404 Error: {str(error)}')
+    return jsonify({
+        'error': 'Not Found',
+        'message': 'The requested resource was not found'
+    }), 404
+
+@app.errorhandler(500)
+def internal_error(error):
+    app.logger.error(f'500 Error: {str(error)}')
+    sentry_sdk.capture_exception(error)
+    return jsonify({
+        'error': 'Internal Server Error',
+        'message': 'An unexpected error occurred'
+    }), 500
+
+@app.errorhandler(Exception)
+def handle_error(error):
+    app.logger.error(f'Unhandled exception: {str(error)}')
+    sentry_sdk.capture_exception(error)
+    return jsonify({
+        'error': 'An unexpected error occurred',
+        'message': str(error)
+    }), 500
 
 # DBT-informed system prompt
 DBT_SYSTEM_PROMPT = """You are a DBT (Dialectical Behavior Therapy) informed AI assistant specializing in emotional regulation and distress tolerance. 
@@ -180,7 +220,7 @@ GROUNDING_EXERCISES = {
     },
     'Gratitude List': {
         'steps': [
-            'List 3 things you're grateful for',
+            'List 3 things you\'re grateful for',
             'Be specific and detailed',
             'Focus on small, everyday things',
             'Write them down if possible'
@@ -437,14 +477,9 @@ def check_crisis_keywords(current_user):
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-@app.errorhandler(Exception)
-def handle_error(error):
-    app.logger.error(f'Unhandled exception: {str(error)}')
-    sentry_sdk.capture_exception(error)
-    return jsonify({
-        'error': 'An unexpected error occurred',
-        'message': str(error)
-    }), 500
-
 if __name__ == '__main__':
-    app.run(debug=os.getenv('FLASK_DEBUG', 'False').lower() == 'true', port=int(os.getenv('PORT', 5000))) 
+    app.run(
+        debug=os.getenv('FLASK_DEBUG', 'False').lower() == 'true',
+        port=int(os.getenv('PORT', 5000)),
+        host='0.0.0.0'
+    ) 
